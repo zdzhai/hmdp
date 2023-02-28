@@ -33,7 +33,10 @@ public class ShopController {
      */
     @GetMapping("/{id}")
     public Result queryShopById(@PathVariable("id") Long id) {
-        return Result.ok(shopService.getById(id));
+        if (id < 0){
+            return Result.fail("商铺不存在");
+        }
+        return shopService.queryById(id);
     }
 
     /**
@@ -43,8 +46,10 @@ public class ShopController {
      */
     @PostMapping
     public Result saveShop(@RequestBody Shop shop) {
-        // 写入数据库
-        shopService.save(shop);
+        if (shop == null){
+            Result.fail("修改商铺信息错误");
+        }
+        Result result =  shopService.updateShop(shop);
         // 返回店铺id
         return Result.ok(shop.getId());
     }
