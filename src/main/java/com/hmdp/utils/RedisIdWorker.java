@@ -12,7 +12,7 @@ public class RedisIdWorker {
     /**
      * 开始时间戳
      */
-    private static final long BEGIN_TIMESTAMP = 1640995200L;
+    private static final long BEGIN_TIMESTAMP = 1672531200L;
     /**
      * 序列号的位数
      */
