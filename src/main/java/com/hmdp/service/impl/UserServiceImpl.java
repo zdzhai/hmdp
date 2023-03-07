@@ -54,7 +54,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         //4.保存验证码到redis
         stringRedisTemplate.opsForValue()
                 .set(LOGIN_CODE_KEY + phone,code,LOGIN_CODE_TTL, TimeUnit.MINUTES);
-        //5.todo 发送验证码
+        //5.todo 发送验证码 api项目
         return Result.ok();
     }
 

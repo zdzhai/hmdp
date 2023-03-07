@@ -1,5 +1,9 @@
 package com.hmdp.utils;
 
+/**
+ * @author dongdong
+ * 通用锁接口
+ */
 public interface ILock {
 
     /**

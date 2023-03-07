@@ -90,7 +90,8 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
      **/
     private boolean tryLock(String key){
         //todo 这里其实还是会有问题的，有可能方法未执行完的时候，锁就已经过期了，
-        //todo 释放锁的时候有可能释放了别人的锁，所以这里可以对锁的名字进行修改为每个线程特有的
+        //todo 释放锁的时候有可能释放了别人的锁，所以这里可以对锁的名字进行修改为每个线程特有的Id表示
+        //todo 但是还有个问题是判断标识和释放锁是两个动作，也有可能会出现线程安全问题，所以后续使用lua脚本保证原子性
         //todo 所以可以使用redisson实现分布式锁
         Boolean flag = stringRedisTemplate.opsForValue()
                 .setIfAbsent(key, "1", 10, TimeUnit.SECONDS);

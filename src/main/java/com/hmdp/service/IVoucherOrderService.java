@@ -19,12 +19,12 @@ public interface IVoucherOrderService extends IService<VoucherOrder> {
      * @param voucherId
      * @return
      */
-    Result seckillVoucher(Long voucherId);
+    Result seckillVoucher(Long voucherId) throws InterruptedException;
 
     /**
      * 创建优惠券
      * @param voucherId
      * @return
      */
-    Result createVoucher(Long voucherId);
+    Result createVoucherOrder(Long voucherId);
 }

@@ -6,14 +6,20 @@ import com.hmdp.entity.SeckillVoucher;
 import com.hmdp.entity.VoucherOrder;
 import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.IVoucherOrderService;
+import com.hmdp.utils.ILock;
 import com.hmdp.utils.RedisIdWorker;
+import com.hmdp.utils.SimpleRedisLock;
 import com.hmdp.utils.UserHolder;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -31,6 +37,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     @Resource
     private RedisIdWorker redisIdWorker;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private RedissonClient redissonClient;
 
     @Override
     public Result seckillVoucher(Long voucherId) {
@@ -56,20 +68,37 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         //4.库存充足，
         //5.根据优惠券id和用户id查询订单表，看用户是否已下单
         Long userId = UserHolder.getUser().getId();
-        //这里直接锁方法的话，锁的粒度太大，我们只需要锁当前用户即可
+//        ILock lock = new SimpleRedisLock("order:" + userId,stringRedisTemplate);
+        //用redisson分布式锁
+        RLock lock = redissonClient.getLock("lock:order:" + userId);
+        //尝试获取锁
+        boolean success = lock.tryLock();
+        //获取锁失败，直接返回
+        if (!success){
+            return Result.fail("不允许重复下单");
+        }
+        try {
+            //获取当前对象的代理对象
+            IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
+            return proxy.createVoucherOrder(voucherId);
+        } finally {
+            //释放锁
+            lock.unlock();
+        }
+/*        //这里直接锁方法的话，锁的粒度太大，我们只需要锁当前用户即可
         //但是toString()方法会创建新的字符串对象，所以使用inter()方法去常量池中找值相同的值
-        //这里还需要主要，Spring管理事务是使用的AOP动态代理，
+        //这里还需要，Spring管理事务是使用的AOP动态代理，
         // 所以我们应该使用动态代理对象来条用创建优惠券的方法
         synchronized (userId.toString().intern()) {
             //获取当前事务的代理对象
             IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
-            return proxy.createVoucher(voucherId);
-        }
+            return proxy.createVoucherOrder(voucherId);
+        }*/
     }
 
     @Override
     @Transactional
-    public Result createVoucher(Long voucherId) {
+    public Result createVoucherOrder(Long voucherId) {
         //一人一单
             Long userId = UserHolder.getUser().getId();
             int count = this.query().eq("voucher_id", voucherId)

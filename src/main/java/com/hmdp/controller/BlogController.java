@@ -38,7 +38,7 @@ public class BlogController {
         UserDTO user = UserHolder.getUser();
         blog.setUserId(user.getId());
         // 保存探店博文
-        blogService.save(blog);
+        blogService.saveBlog(blog);
         // 返回id
         return Result.ok(blog.getId());
     }
@@ -46,9 +46,15 @@ public class BlogController {
     @PutMapping("/like/{id}")
     public Result likeBlog(@PathVariable("id") Long id) {
         // 修改点赞数量
-        blogService.update()
-                .setSql("liked = liked + 1").eq("id", id).update();
+        blogService.likeBlog(id);
         return Result.ok();
+    }
+
+    @GetMapping("/likes/{id}")
+    public Result likesBlog(@PathVariable("id") Long id) {
+        // 修改点赞数量
+        List<UserDTO> userDTOList = blogService.likesBlog(id);
+        return Result.ok(userDTOList);
     }
 
     @GetMapping("/of/me")
@@ -65,19 +71,17 @@ public class BlogController {
 
     @GetMapping("/hot")
     public Result queryHotBlog(@RequestParam(value = "current", defaultValue = "1") Integer current) {
-        // 根据用户查询
-        Page<Blog> page = blogService.query()
-                .orderByDesc("liked")
-                .page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
-        // 获取当前页数据
-        List<Blog> records = page.getRecords();
-        // 查询用户
-        records.forEach(blog ->{
-            Long userId = blog.getUserId();
-            User user = userService.getById(userId);
-            blog.setName(user.getNickName());
-            blog.setIcon(user.getIcon());
-        });
-        return Result.ok(records);
+
+        return blogService.queryHotBlog(current);
+    }
+
+    @GetMapping("/{id}")
+    public Result queryBlogById(@PathVariable("id") Long id){
+        //1.校验参数
+        if (id == null || id < 0){
+            return Result.fail("博客不存在");
+        }
+        //2.处理请求
+        return blogService.queryBlogById(id);
     }
 }
