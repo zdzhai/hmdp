@@ -14,13 +14,18 @@ import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.RegexUtils;
+import com.hmdp.utils.UserHolder;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -97,5 +102,61 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         //设置token过期时间
         stringRedisTemplate.expire(tokenKey,LOGIN_USER_TTL,TimeUnit.MINUTES);
         return Result.ok(token);
+    }
+
+    @Override
+    public Result sign() {
+        //1.获取当前用户
+        Long userId = UserHolder.getUser().getId();
+        //2.获取日期
+        LocalDateTime now = LocalDateTime.now();
+        //3.拼接key
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        String key = USER_SIGN_KEY + userId + keySuffix;
+        //4.今天是本月的第几天
+        int dayOfMonth = now.getDayOfMonth();
+        //5.写入redis
+        stringRedisTemplate.opsForValue().setBit(key, dayOfMonth - 1, true);
+        return Result.ok();
+    }
+
+    @Override
+    public Result signCount() {
+        //1.获取当前用户
+        Long userId = UserHolder.getUser().getId();
+        //2.获取日期
+        LocalDateTime now = LocalDateTime.now();
+        //3.拼接key
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        String key = USER_SIGN_KEY + userId + keySuffix;
+        //4.今天是本月的第几天
+        int dayOfMonth = now.getDayOfMonth();
+        //1.获取用户本月到今天的所有数据 返回的是十进制的数字 BITFIELD sign:5:202203 GET u14 0
+        List<Long> result = stringRedisTemplate.opsForValue().bitField(key,
+                BitFieldSubCommands.create()
+                        .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth)).valueAt(0));
+        if (result == null){
+            //没有任何签到记录
+            return Result.ok();
+        }
+        //2.获取到最近一次的签到
+        Long num = result.get(0);
+        if (num == null || num == 0){
+            return Result.ok(0);
+        }
+        //3.向前遍历，计数器加1，直到第一个未签到
+        int count = 0;
+        while (true){
+            //与1做与运算 判断最后一位是1还是0
+            if ((num & 1) == 0){
+                //是0则代表没有签到
+                break;
+            } else {
+                //是1则代表签到了 计数器加1
+                num >>= 1;
+                count++;
+            }
+        }
+        return Result.ok(count);
     }
 }

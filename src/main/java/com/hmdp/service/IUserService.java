@@ -32,4 +32,16 @@ public interface IUserService extends IService<User> {
      * @return
      */
     Result login(LoginFormDTO loginFormDTO, HttpSession session);
+
+    /**
+     * 使用redis的BitMap功能实现用户打卡功能
+     * @return
+     */
+    Result sign();
+
+    /**
+     * 用户连续签到统计
+     * @return
+     */
+    Result signCount();
 }

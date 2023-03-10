@@ -21,7 +21,7 @@ public interface IBlogService extends IService<Blog> {
      * 保存用户创建的blog
      * @param blog
      */
-    void saveBlog(Blog blog);
+    Result saveBlog(Blog blog);
 
     /**
      * 根据blogId来查询blog
@@ -50,4 +50,11 @@ public interface IBlogService extends IService<Blog> {
      * @return List
      */
     List<UserDTO> likesBlog(Long id);
+    /**
+     * 刷新关注用户发布的blog
+     * @param max
+     * @param offset
+     * @return
+     */
+    Result queryBlogOfFollow(Long max, Integer offset);
 }
