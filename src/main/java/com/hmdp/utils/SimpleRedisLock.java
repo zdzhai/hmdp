@@ -23,7 +23,7 @@ public class SimpleRedisLock implements ILock {
     }
 
     private static final String KEY_PREFIX = "lock:";
-    private static final String ID_PREFIX = UUID.randomUUID().toString(true);
+    private static final String ID_PREFIX = UUID.randomUUID().toString(true) + "-";
     private static final DefaultRedisScript<Long> UNLOCK_SCRIPT;
 
     static {
@@ -50,7 +50,7 @@ public class SimpleRedisLock implements ILock {
                 Collections.singletonList(KEY_PREFIX + name),
                 ID_PREFIX + Thread.currentThread().getId()
         );
-/*        //获取线程标识
+/*        //获取线程标识防止释放别人的锁
         String threadId = ID_PREFIX + Thread.currentThread().getId();
         //判断是否是自己的锁
         String id = stringRedisTemplate.opsForValue().get(KEY_PREFIX + name);
