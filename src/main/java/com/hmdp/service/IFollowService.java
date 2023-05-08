@@ -31,9 +31,17 @@ public interface IFollowService extends IService<Follow> {
 
     /**
      * 获取当前用户关注和blog作者的共同关注好友
+     * 通过redis的交集
      * @param followUserId
      * @return
      */
     Result queryCommonUsers(Long followUserId);
 
+    /**
+     * 获取当前用户关注和blog作者的共同关注好友
+     * 通过数据库查询的方式
+     * @param followUserId
+     * @return
+     */
+    Result queryCommonUsersByDB(Long followUserId);
 }

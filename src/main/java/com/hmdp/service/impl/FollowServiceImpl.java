@@ -17,9 +17,11 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.hmdp.constants.RedisConstants.FEED_KEY;
 
@@ -40,6 +42,7 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
 
     @Resource
     private IUserService userService;
+
 
     @Override
     public Result isFollowById(Long followUserId, Boolean isFollow) {
@@ -86,7 +89,6 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
         queryWrapper.eq("user_id",userId)
                 .eq("follow_user_id",followUserId);
         int count = this.count(queryWrapper);
-        System.out.println(count);
         return Result.ok(count > 0);
     }
 
@@ -113,6 +115,48 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
                 .map(user1 -> BeanUtil.copyProperties(user1, UserDTO.class))
                 .collect(Collectors.toList());
         //4.返回数据
+        return Result.ok(commonUsers);
+    }
+
+    @Override
+    public Result queryCommonUsersByDB(Long followUserId) {
+        //1.获取当前用户id
+        UserDTO user = UserHolder.getUser();
+        if (user == null){
+            return Result.fail("未登录");
+        }
+        Long userId = UserHolder.getUser().getId();
+        //1. 从follow表中查询本人的关注列表和某用户的关注列表
+        QueryWrapper<Follow> queryWrapper = null;
+        queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id",userId);
+        List<Follow> userFollowList = this.list(queryWrapper);
+        Set<Long> userFollowHashSet = new HashSet<>();
+        if (userFollowList == null || userFollowList.isEmpty()){
+            return Result.ok(new ArrayList<>());
+        }
+        userFollowList.stream()
+                .forEach(follow -> userFollowHashSet.add(follow.getFollowUserId())
+                );
+        //2. 把自己的关注列表放到hashSet中，然后遍历某用户的关注列表，看有多少存在。
+        queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id",followUserId);
+        List<Follow> blogUserFollowList = this.list(queryWrapper);
+        if (blogUserFollowList == null || blogUserFollowList.isEmpty()){
+            return Result.ok(new ArrayList<>());
+        }
+        List<Follow> commonFollowsList = blogUserFollowList.stream()
+                .filter(follow -> userFollowHashSet.contains(follow.getFollowUserId()))
+                .collect(Collectors.toList());
+        //4.返回数据
+        List<Long> ids = commonFollowsList
+                .stream()
+                .map(Follow::getFollowUserId).collect(Collectors.toList());
+        //5.根据id查询数据库
+        List<UserDTO> commonUsers = userService.listByIds(ids)
+                .stream()
+                .map(user1 -> BeanUtil.copyProperties(user1, UserDTO.class))
+                .collect(Collectors.toList());
         return Result.ok(commonUsers);
     }
 }
